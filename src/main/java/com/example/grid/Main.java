@@ -88,22 +88,24 @@ public class Main extends Application {
         }
     }
 
+    // later update to have all 10 outputs at the end
     private void print(ActionEvent e, GridPane gridPane) {
         StringBuilder result = new StringBuilder();
         //GridPane grid = (GridPane) e.getSource();
         GridPane grid = gridPane;
         Scanner scanner = new Scanner(System.in);
 
+        System.out.println("enter digit you drew");
+        result.append(scanner.nextDouble() + ",");
+
         for (Node node : grid.getChildren()) {
             Rectangle rect = (Rectangle) node;
             if (rect.getFill().equals(Color.BLACK)) {
-                result.append("1.0,");
+                result.append("255.0,");
             } else {
                 result.append("0.0,");
             }
         }
-        System.out.println("enter digit you drew");
-        result.append(scanner.nextDouble());
         System.out.println(result);
     }
 
@@ -113,12 +115,14 @@ public class Main extends Application {
 
         for (Node node : grid.getChildren()) {
             Rectangle rect = (Rectangle) node;
-            rect.setFill(Color.LIGHTGRAY);
+            rect.setFill(Color.WHITE);
         }
     }
 
     // Main method to launch the application
     public static void main(String[] args) {
+        Network network = new Network();
+        network.doStuff();
         launch(args);
     }
 }
