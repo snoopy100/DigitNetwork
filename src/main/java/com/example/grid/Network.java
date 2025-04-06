@@ -1,72 +1,159 @@
 package com.example.grid;
-import javafx.css.converter.ColorConverter;
-import org.neuroph.core.NeuralNetwork;
-import org.neuroph.core.data.DataSet;
-import org.neuroph.core.data.DataSetRow;
-import org.neuroph.core.events.LearningEvent;
-import org.neuroph.core.events.LearningEventListener;
-import org.neuroph.nnet.MultiLayerPerceptron;
-import org.neuroph.nnet.learning.BackPropagation;
-import org.neuroph.nnet.learning.MomentumBackpropagation;
 
-import java.util.*;
-import java.util.stream.Stream;
+import org.encog.Encog;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.MLDataSet;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataSet;
+import org.encog.ml.data.buffer.BufferedMLDataSet;
+import org.encog.ml.train.strategy.StopTrainingStrategy;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.neural.networks.ContainsFlat;
+import org.encog.neural.networks.training.propagation.back.Backpropagation;
+import org.encog.neural.networks.training.propagation.resilient.ResilientPropagation;
+import org.encog.neural.networks.training.strategy.SmartLearningRate;
+import org.encog.neural.pnn.BasicPNN;
+import org.encog.neural.networks.layers.BasicLayer;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.util.simple.EncogUtility;
 
-public class Network implements LearningEventListener {
-    NeuralNetwork network = new MultiLayerPerceptron(784, 32, 32, 10);
-    DataSet testSet = DataSet.createFromFile("/Users/JacksonKotch/Desktop/Grid/src/main/resources/com/example/grid/test.csv", 784, 10, ",");
+import java.io.File;
+import java.io.SyncFailedException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
 
-    DataSet trainSet = DataSet.createFromFile("/Users/JacksonKotch/Desktop/Grid/src/main/resources/com/example/grid/train.csv", 784, 10, ",");
+public class Network {
+    private static final String NETWORK_FILE = "network.eg";
+    //private BasicPNN network;
+    private BasicNetwork network;
+    private MLDataSet trainSet, testSet;
+    //private BasicMLDataSet trainSet, testSet;
 
-    @Override
-    public void handleLearningEvent(LearningEvent event) {
-        BackPropagation bp = (BackPropagation) event.getSource();
+    public void doStuff(Network net) {
+        // Load training and testing data
+        trainSet = loadCSV("src/main/resources/com/example/grid/train.csv");
+        testSet = loadCSV("src/main/resources/com/example/grid/test.csv");
 
-        if (event.getEventType().equals(LearningEvent.Type.LEARNING_STOPPED)) {
-            double error = bp.getTotalNetworkError();
-            System.out.println("training finished in : " + bp.getCurrentIteration() + "iterations");
-            System.out.println("with total error : " + error);
+        File file = new File(NETWORK_FILE);
+        if (file.exists()) {
+            network = (BasicNetwork) EncogDirectoryPersistence.loadObject(file);
+            // network = (BasicPNN) EncogDirectoryPersistence.loadObject(file);
+            System.out.println("Network file exists. Loaded trained model.");
+            return;
         } else {
-            System.out.println("current iteration : " + bp.getCurrentIteration());
-            System.out.println("current error rate : " + bp.getPreviousEpochError());
+            createNetwork();
+        }
+
+        int epoch = 1;
+        do {
+            net.train(epoch);
+            epoch++;
+        } while (net.test() * 100 < 85);
+       // network.setSamples(trainSet);
+        System.out.println("Training finished.");
+        net.test();
+
+        if ((new Scanner(System.in)).nextInt() == 1) {
+            net.save();
         }
     }
-    public void doStuff() {
-        MomentumBackpropagation learningRule = (MomentumBackpropagation) network.getLearningRule();
-        learningRule.setLearningRate(0.006);
-        learningRule.setMaxError(0.002);
-        learningRule.setMaxIterations(1000);
-        learningRule.addListener(this);
 
-        System.out.println("training");
-        network.learn(trainSet, learningRule);
-        System.out.println("finsihed");
-
-        network.save("network.nnet");
-
-        test(network, testSet);
+    private void createNetwork() {
+        System.out.println("Creating new neural network...");
+        network = new BasicNetwork();
+        //network = new BasicPNN(PNNKernelType.Gaussian, PNNOutputMode.Classification, 784, 10);
+        //network.setSamples(testSet);
+        network.addLayer(new BasicLayer(null, true, 784));   // Input layer
+        network.addLayer(new BasicLayer(new ActivationSigmoid(), true, 1, 6));  // Hidden layer 1
+        network.addLayer(new BasicLayer(new ActivationSigmoid(), true, 16));  // Hidden layer 2
+        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, 10)); // Output layer
+        network.getStructure().finalizeStructure();
+        network.reset();
     }
 
-    void test(NeuralNetwork net, DataSet test) {
-        int correct = 0;
-        int incorrect = 0;
-        System.out.println("*******testing*********");
-        for (DataSetRow row : test.getRows()) {
-            net.setInput(row.getInput());
-            net.calculate();
-            ArrayList<Double> expected = new ArrayList<>();
-            Collections.addAll(expected, Arrays.stream(row.getDesiredOutput()).boxed().toArray(Double[]::new));
-            ArrayList<Double> output = new ArrayList<>();
-            Collections.addAll(output, Arrays.stream(net.getOutput()).boxed().toArray(Double[]::new));
-            if (output.indexOf(Collections.max(output)) == expected.indexOf(Collections.max(expected))) {
+    public void train(int epoch) {
+        System.out.println("Training started...");
+        Backpropagation training = new Backpropagation(network, trainSet, 0.02, 0.3);
+        //ResilientPropagation training = new ResilientPropagation(network, trainSet);
+        training.setBatchSize(1);
+        training.setIteration(300);
+        training.fixFlatSpot(false);
+        training.setThreadCount(Runtime.getRuntime().availableProcessors());
+        training.addStrategy(new StopTrainingStrategy());
+
+        training.iteration();
+        System.out.println("Iteration: " + epoch + " Error: " + training.getError() * 100);
+
+        training.finishTraining();
+        save();
+    }
+
+    public double[] calculate(double[] inputs) {
+        double[] outputs = new double[10];
+        /* network.compute(//Arrays.stream(inputs)
+                //.mapToDouble(Double::intValue)
+                //.toArray(),
+                inputs, outputs); */
+        outputs = network.compute(new BasicMLData(inputs)).getData();
+
+        /* just in case for convertinf double[] to Double[]
+        Arrays.stream(outputs)
+                .boxed()
+                .toArray(Double[]::new)
+         */
+        return outputs;
+
+        //this code was hard to write, it should be hard to read
+        //no useful comments for you!!!
+    }
+
+    public void save() {
+        EncogDirectoryPersistence.saveObject(new File(NETWORK_FILE), network);
+        System.out.println("Network saved to " + NETWORK_FILE);
+    }
+
+    public double test() {
+        double correct = 0.0, incorrect = 0.0;
+        System.out.println("******* Testing *********");
+
+        int num = 0;
+        for (MLDataPair pair : testSet) {
+            MLData output = network.compute(pair.getInput());
+            int predictedIndex = getMaxIndex(output.getData());
+            int actualIndex = getMaxIndex(pair.getIdealArray());
+
+            if (predictedIndex == actualIndex) {
                 correct++;
             } else {
                 incorrect++;
             }
         }
 
-        System.out.println("correct: " + correct);
-        System.out.println("incorrect: " + incorrect);
-        System.out.println("Accuraccy: " + correct/incorrect);
+        double accuracy = correct / (correct + incorrect);
+
+        System.out.println("Correct: " + correct);
+        System.out.println("Incorrect: " + incorrect);
+        System.out.println("Accuracy: " + accuracy * 100);
+        return accuracy;
+    }
+
+    private BasicMLDataSet loadCSV(String filePath) {
+        File file = new File(filePath);
+        File egb = new File(filePath + ".egb");
+        if(!egb.exists()) {
+            EncogUtility.convertCSV2Binary(file, egb, 784, 10, false);
+        }
+        return new BasicMLDataSet(BasicMLDataSet.toList(new BufferedMLDataSet(egb)));
+    }
+
+    private int getMaxIndex(double[] array) {
+        int maxIndex = 0;
+        for (int i = 1; i < array.length; i++) {
+            if (array[i] > array[maxIndex]) maxIndex = i;
+        }
+        return maxIndex;
     }
 }

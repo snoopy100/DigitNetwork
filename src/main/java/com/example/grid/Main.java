@@ -1,128 +1,44 @@
 package com.example.grid;
 
-import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
-public class Main extends Application {
-    private static final int GRID_SIZE = 28;
-    private static final int CELL_SIZE = 20; // Size of each square in pixels
-    private boolean drawing = false;
+public class Main {
+    static Network net;
+    public static void main(String[] args){
+        net = new Network();
+        net.doStuff(net);
+        Application.main(args);
 
-    @Override
-    public void start(Stage primaryStage) {
-        VBox vbox = new VBox();
-        HBox hBox = new HBox();
-        GridPane grid = new GridPane();
+        /* Scanner scanner = new Scanner(new File("src/main/resources/com/example/grid/train.csv"));
+        while (true) {
 
-        Button clearButton = new Button("clear");
-        clearButton.setOnAction(e -> clear(e, grid));
-        Button printButton = new Button("print");
-        printButton.setOnAction(e -> print(e, grid));
+        } */
+    }
 
-        hBox.getChildren().add(printButton);
-        hBox.getChildren().add(clearButton);
-        vbox.getChildren().add(hBox);
-        vbox.getChildren().add(grid);
-
-        // Create the grid of rectangles
-        for (int row = 0; row < GRID_SIZE; row++) {
-            for (int col = 0; col < GRID_SIZE; col++) {
-                Rectangle rect = new Rectangle(CELL_SIZE, CELL_SIZE, Color.WHITE);
-                rect.setStroke(Color.LIGHTGRAY);
-
-                // Handle mouse events for each rectangle
-                rect.setOnMousePressed(e -> handleMousePress(e));
-                rect.setOnMouseReleased(e -> handleMouseRelease());
-                rect.setOnMouseDragged(e -> handleMouseDragged(e, rect));
-
-                // Add rectangle to grid
-                grid.add(rect, col, row);
+    public static String compute(String[] inputs) {
+        String[] inputString = inputs;
+        double[] input = new double[784];
+        for (int i = 0; i < 784; i++) {
+            input[i] = Double.parseDouble(inputString[i]);
+        }
+        System.out.println(Arrays.toString(Arrays.stream(input).toArray()));
+        int number = 1234;
+        for(int i = 784; i < inputString.length; i++) {
+            if (Double.parseDouble(inputString[i]) != 0) {
+                number = i - 784;
+                break;
             }
         }
+        StringBuilder calculated = new StringBuilder();
 
-        // Enable mouse dragging on the whole grid
-        grid.setOnMousePressed(e -> handleMousePress(e));
-        grid.setOnMouseReleased(e -> drawing = false);
-        grid.setOnMouseDragged(e -> handleMouseDragged(e, (Rectangle) e.getSource()));
-
-        // Scene setup
-        Scene scene = new Scene(vbox, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-        primaryStage.setTitle("JavaFX Drawing Grid");
-        primaryStage.setScene(scene);
-        primaryStage.show();
-    }
-
-    // Handle mouse pressed event
-    private void handleMousePress(MouseEvent e) {
-        if (e.isPrimaryButtonDown()) {
-            drawing = true;
-            // Check if it's over a rectangle and make it black
-            Rectangle rect = (Rectangle) e.getSource();
-            rect.setFill(Color.BLACK);
-        }
-    }
-
-    // Handle mouse release event
-    private void handleMouseRelease() {
-        drawing = false;
-    }
-
-    // Handle mouse dragged event
-    private void handleMouseDragged(MouseEvent e, Rectangle rect) {
-        if (drawing && e.isPrimaryButtonDown()) {
-            // Find the rectangle under the mouse
-            //Rectangle rect = (Rectangle) e.getSource();
-            rect.setFill(Color.BLACK);
-        }
-    }
-
-    // later update to have all 10 outputs at the end
-    private void print(ActionEvent e, GridPane gridPane) {
-        StringBuilder result = new StringBuilder();
-        //GridPane grid = (GridPane) e.getSource();
-        GridPane grid = gridPane;
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("enter digit you drew");
-        result.append(scanner.nextDouble() + ",");
-
-        for (Node node : grid.getChildren()) {
-            Rectangle rect = (Rectangle) node;
-            if (rect.getFill().equals(Color.BLACK)) {
-                result.append("255.0,");
-            } else {
-                result.append("0.0,");
-            }
-        }
-        System.out.println(result);
-    }
-
-    private void clear(ActionEvent e, GridPane gridPane) {
-        //GridPane grid = (GridPane) e.getSource();
-        GridPane grid = gridPane;
-
-        for (Node node : grid.getChildren()) {
-            Rectangle rect = (Rectangle) node;
-            rect.setFill(Color.WHITE);
-        }
-    }
-
-    // Main method to launch the application
-    public static void main(String[] args) {
-        Network network = new Network();
-        network.doStuff();
-        launch(args);
+        ArrayList<Double> outputs = new ArrayList<>(Arrays.stream(net.calculate(input)).boxed().toList());
+        calculated.append(outputs + "\n");
+        calculated.append("Network calculation : " + outputs.indexOf(Arrays.stream(net.calculate(input)).max().getAsDouble()));
+        return calculated.toString();
     }
 }
