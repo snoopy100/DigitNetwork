@@ -1,7 +1,9 @@
 package com.example.grid;
 
 import org.encog.Encog;
+import org.encog.engine.network.activation.ActivationReLU;
 import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationSoftMax;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
@@ -9,6 +11,7 @@ import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataSet;
 import org.encog.ml.data.buffer.BufferedMLDataSet;
 import org.encog.ml.train.strategy.StopTrainingStrategy;
+import org.encog.neural.error.CrossEntropyErrorFunction;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.ContainsFlat;
 import org.encog.neural.networks.training.propagation.back.Backpropagation;
@@ -67,26 +70,23 @@ public class Network {
         //network = new BasicPNN(PNNKernelType.Gaussian, PNNOutputMode.Classification, 784, 10);
         //network.setSamples(testSet);
         network.addLayer(new BasicLayer(null, true, 784));   // Input layer
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), true, 1, 6));  // Hidden layer 1
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), true, 16));  // Hidden layer 2
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, 10)); // Output layer
+        network.addLayer(new BasicLayer(new ActivationReLU(), true, 20));  // Hidden layer 1
+        network.addLayer(new BasicLayer(new ActivationReLU(), true, 16));  // Hidden layer 2
+        network.addLayer(new BasicLayer(new ActivationReLU(), false, 10)); // Output layer
         network.getStructure().finalizeStructure();
         network.reset();
     }
 
     public void train(int epoch) {
+        System.out.println("\nEpoch Number : " + epoch);
+        StopTrainingStrategy stop = new StopTrainingStrategy();
         System.out.println("Training started...");
         Backpropagation training = new Backpropagation(network, trainSet, 0.02, 0.3);
-        //ResilientPropagation training = new ResilientPropagation(network, trainSet);
-        training.setBatchSize(1);
-        training.setIteration(300);
-        training.fixFlatSpot(false);
-        training.setThreadCount(Runtime.getRuntime().availableProcessors());
-        training.addStrategy(new StopTrainingStrategy());
+        training.setThreadCount(Runtime.getRuntime().availableProcessors() + 1);
+        training.addStrategy(stop);
+        training.setBatchSize(200);
 
         training.iteration();
-        System.out.println("Iteration: " + epoch + " Error: " + training.getError() * 100);
-
         training.finishTraining();
         save();
     }

@@ -1,5 +1,8 @@
 package com.example.grid;
 
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;

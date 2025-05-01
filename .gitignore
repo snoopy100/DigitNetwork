@@ -1,5 +1,9 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
+src/main/resources/com/example/grid/test.csv
+src/main/resources/com/example/grid/test.csv.egb
+src/main/resources/com/example/grid/train.csv
+src/main/resources/com/example/grid/train.csv.egb
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
