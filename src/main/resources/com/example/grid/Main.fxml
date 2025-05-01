@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.HBox?>
 
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infini-ty" prefHeight="400.0" prefWidth="600.0"
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0"
             xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.grid.MainController">
    <children>
       <HBox layoutX="191.0" layoutY="43.0" prefHeight="100.0" prefWidth="200.0" spacing="50.0" style="-fx-background-color: brown;" AnchorPane.bottomAnchor="300.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="30.0">
